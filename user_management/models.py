@@ -11,22 +11,25 @@ class CustomUserManager(BaseUserManager):
     for authentication instead of usernames.
     """
 
-    def create_user(self, email, **extra_fields):
+    def create_user(self, email, password = None,**extra_fields):
         """
         Create and save a User with the given email and password.
         """
         if not email:
             raise ValueError('The email must be set')
         user = self.model(email=email, **extra_fields)
+
+        # ✅ HASH PASSWORD
+        user.set_password(password)
+
         user.save()
         return user
 
-    def create_superuser(self, email, **extra_fields):
-        """
-        Create and save a SuperUser with the given email and password.
-        """
-        # extra_fields.setdefault('is_active', True)
-        return self.create_user(email, **extra_fields)
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('status', True)
+
+        return self.create_user(email, password, **extra_fields)
 
 # Create your models here
 class User(AbstractBaseUser):
@@ -54,7 +57,8 @@ class User(AbstractBaseUser):
     created_by = models.PositiveIntegerField(null=True, blank=True)
     modified_on = models.DateTimeField(null=True)
     modified_by = models.PositiveIntegerField(null=True, blank=True)
-    auth0_id = models.CharField(null=True, blank=True)
+    # auth0_id = models.CharField(null=True, blank=True)
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 

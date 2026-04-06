@@ -1,3 +1,5 @@
+import os
+
 from decouple import config
 from pathlib import Path
 
@@ -44,11 +46,16 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Custom middlewares for logger
+    'logger.middleware.access_logger.AccessLoggerMiddleware',
+    'logger.middleware.error_logger.ErrorLoggerMiddleware'
 ]
 
 ROOT_URLCONF = 'vendor_booking_tool.urls'
@@ -86,8 +93,48 @@ DATABASES = {
         "HOST": config("DATABASE_HOST"),
         "PORT": config("DATABASE_PORT"),
 
-
     }
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'vendor_booking_tool.utility.CustomPagination',
+    'PAGE_SIZE': config('PAGE_SIZE', 50),
+    'EXCEPTION_HANDLER': 'vendor_booking_tool.custom_exception_handler.error_handler',
+
+}
+
+AUTH_USER_MODEL = 'user_management.User'
+
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/app.log')},
+    },
+
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'logger.middleware': {  # your custom app
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }
 
 # Password validation

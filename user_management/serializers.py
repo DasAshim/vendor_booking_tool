@@ -47,7 +47,7 @@ class UserSerializers(serializers.ModelSerializer):
     status = serializers.IntegerField(required=False, allow_null=True)
     export = serializers.BooleanField(required=False, allow_null=True, default=False)
 
-    auth0_id = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # auth0_id = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = User
@@ -56,7 +56,7 @@ class UserSerializers(serializers.ModelSerializer):
                   'created_by', 'created_by_name', 'modified_on_start_date',
                   'modified_on_end_date', 'last_login_start_date', 'last_login_end_date', 'modified_by',
                   'modified_by_name', 'page', 'page_size', 'status', "role_name",
-                  'export', 'search', 'auth0_id')
+                  'export', 'search',)
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -69,7 +69,7 @@ class UserReadSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             "id", "is_superuser", "email", 'first_name', 'last_name', 'created_on', 'last_login', 'status',
-            'country_code', 'auth0_id',
+            'country_code',
             'is_deleted', 'phone_number', 'modified_on', "last_login", "organisation_name", "timezone",
             "country", "created_by", "created_on", "modified_by", "modified_on", "role_data")
 
@@ -96,7 +96,7 @@ class UserProfileReadSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'is_superuser', 'announcement_read_flag', 'role', 'email', 'first_name', 'last_name',
-            'created_on', 'last_login', 'status', 'country_code', 'company', 'auth0_id',
+            'created_on', 'last_login', 'status', 'country_code', 'company',
             'is_deleted', 'phone_number', 'modified_on', "last_login", "organisation_name", "timezone",
             "country", "created_by", "modified_by")
 
@@ -134,7 +134,7 @@ class UserProfileReadSerializer(serializers.ModelSerializer):
 class UserShortInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', "phone_number", 'country_code', 'auth0_id')
+        fields = ('id', 'email', 'first_name', 'last_name', "phone_number", 'country_code',)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -145,7 +145,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'phone_number', 'email',
-                  "organisation_name", "timezone", "country", 'auth0_id')
+                  "organisation_name", "timezone", "country",)
 
 
 class UserEditSerializer(serializers.ModelSerializer):
@@ -161,7 +161,7 @@ class UserEditSerializer(serializers.ModelSerializer):
         model = User
         fields = ('status', 'role_id', 'first_name', 'last_name', 'phone_number', 'email',
                   "organisation_name", "timezone", "country", 'country_code', 'company_id', 'company_dict', 'role',
-                  'auth0_id')
+                  )
         read_only_fields = ('company_dict',)
 
     def update(self, instance, validated_data):
@@ -284,7 +284,7 @@ class UserReadEmailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "email", "first_name", "last_name", 'auth0_id')
+        fields = ("id", "email", "first_name", "last_name",)
 
 
 class TokenSerializer(serializers.ModelSerializer):
@@ -341,18 +341,19 @@ class UpdateSuperUserSerializer(serializers.ModelSerializer):
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
         fields = ('status', 'first_name', 'last_name', 'email', 'password', 'organisation_name', 'created_on',
-                  'auth0_id')
+                  )
         read_only_fields = ('created_on',)
 
     def create(self, validated_data):
         try:
             with transaction.atomic():
-                password = validated_data.pop('password', None)
+                password = validated_data.pop('password')
 
-                # Always use create_user or create_superuser
                 user = User.objects.create_user(
                     password=password,
                     **validated_data)
@@ -372,7 +373,7 @@ class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'status', 'first_name', 'last_name', 'email', 'organisation_name', 'role', 'company',
-                  'company_dict', 'created_on', 'auth0_id')
+                  'company_dict', 'created_on',)
         read_only_fields = ('created_on', 'id', 'company_dict')
 
     @staticmethod
@@ -397,34 +398,25 @@ class UserRoleSerializer(serializers.ModelSerializer):
                 else:
                     email = validated_data.get("email").strip().lower()
                     auth0_user_id = None
+                    password = validated_data.get("password")
 
                     # First, check if user already exists in Auth0
                     try:
-                        auth0_user_id = check_user_exists_auth0(email)
-                        print("auth0_user_id", auth0_user_id['user_id'])
-                        logging.info(f"User already exists in Auth0 with EMAIL: {auth0_user_id}")
-                        # logging.info(f"User already exists in Auth0 with ID: {auth0_user_id}")
+                        user = User.objects.get(email=email)
+                        logging.info(f"User already exists in Auth0 with EMAIL: {user.email}")
                     except (ValueError, Exception) as e:
                         # User doesn't exist in Auth0, create new one
-                        logging.info(f"User not found in Auth0, creating new user: {str(e)}")
-                        auth0_user_id = create_user_in_auth0(
-                            email=email,
-                            first_name=validated_data.get("first_name"),
-                            last_name=validated_data.get("last_name"),
+                        logging.info(f"User not found in DB , creating new user: {str(e)}")
+
+                        user = User.objects.create_user(
+                            **validated_data
                         )
-                        if not auth0_user_id:
-                            raise serializers.ValidationError("Failed to create user in Auth0")
 
-                    validated_data["auth0_id"] = auth0_user_id
-                    user = User.objects.create_user(
-                        **validated_data
-                    )
+                    if role_data:
+                        UserRole.objects.create(user=user, role=role_data)
 
-                if role_data:
-                    UserRole.objects.create(user=user, role=role_data)
-
-                if company_id:
-                    self.add_user_company(user.id, company_id)
+                    if company_id:
+                        self.add_user_company(user.id, company_id)
 
                 return user
 
@@ -442,147 +434,129 @@ class UserRoleSerializer(serializers.ModelSerializer):
 
                 email = validated_data.get("email", instance.email).strip().lower()
 
-                # Step 1: Get Auth0 user
-                auth0_users = check_user_exists_auth0(email)
+                # Step 1: Get Auth0 user (currently DB check)
+                auth0_users = User.objects.filter(email=email)
 
                 if not auth0_users:
                     raise serializers.ValidationError("User not found in Auth0.")
 
-                connection = auth0_users[0].get("connection")
-                print('update wala connection', connection)
+                #  If only role update (no other fields, no password)
+                if not validated_data and not password and role_data:
+                    UserRole.objects.filter(user=instance).delete()
+                    UserRole.objects.create(user=instance, role=role_data)
+                    return instance
 
-                # Step 2: Restricted fields
-                restricted_fields = {"first_name", "last_name", "email"}
+                #  xxxxFULL UPDATE (DB LOGIN FLOW)
+                if not validated_data and not password and not role_data:
+                    raise serializers.ValidationError(
+                        "Please provide at least one field to update."
+                    )
 
-                # ✅ IF: SOCIAL LOGIN → ONLY ROLE UPDATE
-                if connection != "Username-Password-Authentication":
+                # Update fields
+                for attr, value in validated_data.items():
+                    setattr(instance, attr, value)
 
-                    invalid_fields = set(validated_data.keys()).intersection(restricted_fields)
+                # Update password (hashed)
+                if password:
+                    instance.set_password(password)
 
-                    if invalid_fields:
-                        raise serializers.ValidationError(
-                            f"Cannot update {list(invalid_fields)} for social login users. Only role can be updated."
-                        )
+                instance.save()
 
-                    if not role_data:
-                        raise serializers.ValidationError(
-                            "Role is required for updating social login users."
-                        )
-
-                    # Only role update
+                # Update role if provided
+                if role_data:
                     UserRole.objects.filter(user=instance).delete()
                     UserRole.objects.create(user=instance, role=role_data)
 
-                    return instance
-
-                # ✅ ELSE: DB LOGIN → FULL UPDATE
-                else:
-
-                    if not validated_data and not password and not role_data:
-                        raise serializers.ValidationError(
-                            "Please provide at least one field to update."
-                        )
-
-                    for attr, value in validated_data.items():
-                        setattr(instance, attr, value)
-
-                    if password:
-                        instance.set_password(password)
-
-                    instance.save()
-
-                    if role_data:
-                        UserRole.objects.filter(user=instance).delete()
-                        UserRole.objects.create(user=instance, role=role_data)
-
-                    return instance
+                return instance
 
         except serializers.ValidationError:
             raise
+
         except Exception as ee:
             logging.error(ee)
             raise serializers.ValidationError("Please provide valid data")
 
-    # def update(self, instance, validated_data):
-    #     try:
-    #         with transaction.atomic():
-    #             role_data = validated_data.pop('role', None)
-    #             password = validated_data.pop('password', None)
-    # 
-    #             email = validated_data.get("email", instance.email).strip().lower()
-    # 
-    #             #  Step 1: Get Auth0 user
-    #             auth0_users = check_user_exists_auth0(email)
-    # 
-    #             connection = None
-    #             if auth0_users:
-    #                 connection = auth0_users[0].get("connection")
-    #                 print('connection', connection)
-    # 
-    #             #  Step 2: Restrict updates based on connection
-    #             restricted_fields = {"first_name", "last_name", "email"}
-    # 
-    #             if connection and connection != "Username-Password-Authentication":
-    #                 #  Allow ONLY role update
-    #                 if any(field in validated_data for field in restricted_fields):
-    #                     raise serializers.ValidationError(
-    #                         "Cannot update name/email for social login users. Only role can be updated."
-    #                     )
-    # 
-    #             for attr, value in validated_data.items():
-    #                 setattr(instance, attr, value)
-    # 
-    #             if password:  # Hash it properly
-    #                 instance.set_password(password)
-    # 
-    #             instance.save()
-    # 
-    #             if role_data:
-    #                 UserRole.objects.filter(user=instance).delete()
-    #                 UserRole.objects.create(user=instance, role=role_data)
-    # 
-    #             return instance
-    # 
-    #     except Exception as ee:
-    #         logging.error(ee)
-    #         raise serializers.ValidationError("Please provide valid data")
 
-    @staticmethod
-    def add_user_company(user_id, company_id):
-        """
+# def update(self, instance, validated_data):
+#     try:
+#         with transaction.atomic():
+#             role_data = validated_data.pop('role', None)
+#             password = validated_data.pop('password', None)
+#
+#             email = validated_data.get("email", instance.email).strip().lower()
+#
+#             #  Step 1: Get Auth0 user
+#             auth0_users = check_user_exists_auth0(email)
+#
+#             connection = None
+#             if auth0_users:
+#                 connection = auth0_users[0].get("connection")
+#                 print('connection', connection)
+#
+#             #  Step 2: Restrict updates based on connection
+#             restricted_fields = {"first_name", "last_name", "email"}
+#
+#             if connection and connection != "Username-Password-Authentication":
+#                 #  Allow ONLY role update
+#                 if any(field in validated_data for field in restricted_fields):
+#                     raise serializers.ValidationError(
+#                         "Cannot update name/email for social login users. Only role can be updated."
+#                     )
+#
+#             for attr, value in validated_data.items():
+#                 setattr(instance, attr, value)
+#
+#             if password:  # Hash it properly
+#                 instance.set_password(password)
+#
+#             instance.save()
+#
+#             if role_data:
+#                 UserRole.objects.filter(user=instance).delete()
+#                 UserRole.objects.create(user=instance, role=role_data)
+#
+#             return instance
+#
+#     except Exception as ee:
+#         logging.error(ee)
+#         raise serializers.ValidationError("Please provide valid data")
+
+@staticmethod
+def add_user_company(user_id, company_id):
+    """
         Assign user a company
-        """
-        try:
-            with transaction.atomic():
-                # validate user and company existence
-                user = User.objects.filter(id=user_id).first()
-                company = Company.objects.filter(id=company_id).first()
+    """
+    try:
+        with transaction.atomic():
+            # validate user and company existence
+            user = User.objects.filter(id=user_id).first()
+            company = Company.objects.filter(id=company_id).first()
 
-                if not user or not company:
-                    raise serializers.ValidationError(
-                        {"message": f"Invalid user ({user_id}) or company ({company_id})"}
-                    )
-
-                if UserCompany.objects.filter(user=user, company=company).exists():
-                    raise serializers.ValidationError(
-                        {"message": "This user is already linked to the selected company."}
-                    )
-
-                if UserCompany.objects.filter(user=user).exclude(company=company).exists():
-                    raise serializers.ValidationError(
-                        {"message": "This user is already linked to another company."}
-                    )
-
-                user_company = UserCompany.objects.create(
-                    user=user,
-                    company=company,
+            if not user or not company:
+                raise serializers.ValidationError(
+                    {"message": f"Invalid user ({user_id}) or company ({company_id})"}
                 )
 
-                return user_company
-        except Exception as e:
-            raise serializers.ValidationError(
-                {"message": "Please provide valid user data or company data", "error": str(e)}
+            if UserCompany.objects.filter(user=user, company=company).exists():
+                raise serializers.ValidationError(
+                    {"message": "This user is already linked to the selected company."}
+                )
+
+            if UserCompany.objects.filter(user=user).exclude(company=company).exists():
+                raise serializers.ValidationError(
+                    {"message": "This user is already linked to another company."}
+                )
+
+            user_company = UserCompany.objects.create(
+                user=user,
+                company=company,
             )
+
+            return user_company
+    except Exception as e:
+        raise serializers.ValidationError(
+            {"message": "Please provide valid user data or company data", "error": str(e)}
+        )
 
     def get_company_dict(self, obj):
         """
