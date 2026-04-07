@@ -1,6 +1,10 @@
+import datetime
 import random
+from datetime import timedelta
+from decimal import Decimal
 
 from django.db import models
+from rest_framework import serializers
 from rest_framework.pagination import PageNumberPagination
 
 
@@ -51,3 +55,17 @@ class BaseUserModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+def validate_decimal_coordinate(value,field_name:str , min_value:float, max_value:float):
+    if value is None:
+        return
+
+    try:
+        dec_value = Decimal(value)
+
+        if dec_value < Decimal(min_value) and dec_value > Decimal(max_value):
+            raise serializers.ValidationError(f"Decimal value {value} should be between {min_value} and {max_value} ")
+
+    except (ValueError, TypeError):
+        raise serializers.ValidationError(f"Decimal value {value} should be a decimal number ")
