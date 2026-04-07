@@ -477,50 +477,6 @@ class UserRoleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Please provide valid data")
 
 
-# def update(self, instance, validated_data):
-#     try:
-#         with transaction.atomic():
-#             role_data = validated_data.pop('role', None)
-#             password = validated_data.pop('password', None)
-#
-#             email = validated_data.get("email", instance.email).strip().lower()
-#
-#             #  Step 1: Get Auth0 user
-#             auth0_users = check_user_exists_auth0(email)
-#
-#             connection = None
-#             if auth0_users:
-#                 connection = auth0_users[0].get("connection")
-#                 print('connection', connection)
-#
-#             #  Step 2: Restrict updates based on connection
-#             restricted_fields = {"first_name", "last_name", "email"}
-#
-#             if connection and connection != "Username-Password-Authentication":
-#                 #  Allow ONLY role update
-#                 if any(field in validated_data for field in restricted_fields):
-#                     raise serializers.ValidationError(
-#                         "Cannot update name/email for social login users. Only role can be updated."
-#                     )
-#
-#             for attr, value in validated_data.items():
-#                 setattr(instance, attr, value)
-#
-#             if password:  # Hash it properly
-#                 instance.set_password(password)
-#
-#             instance.save()
-#
-#             if role_data:
-#                 UserRole.objects.filter(user=instance).delete()
-#                 UserRole.objects.create(user=instance, role=role_data)
-#
-#             return instance
-#
-#     except Exception as ee:
-#         logging.error(ee)
-#         raise serializers.ValidationError("Please provide valid data")
-
 @staticmethod
 def add_user_company(user_id, company_id):
     """

@@ -12,7 +12,7 @@ from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView,
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from master_data_management.utility import build_role_global_search_q
+# from master_data_management.utility import build_role_global_search_q
 from vendor_booking_tool.utility import apply_date_time_range_filters
 from user_management.utility import return_user_id_by_name
 from .export_excel import export_query_to_excel
@@ -72,8 +72,8 @@ class RoleFilterApi(APIView):
 
             # Build global search Q only if search has value
             search_value = data.get("search")
-            if search_value:
-                roles = roles.filter(build_role_global_search_q(search_value))
+            # if search_value:
+            #     roles = roles.filter(build_role_global_search_q(search_value))
 
             created_by_name = data.get("created_by_name")
             modified_by_name = data.get("modified_by_name")
