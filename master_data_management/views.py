@@ -10,7 +10,7 @@ from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView,
 
 from acl.privilege import CozentusPermission
 from master_data_management.models import PortOfLoading
-from .serializers import PortOfLoadingReadSerializer, PortOfLoadingFilterSerializer, CarrierFilterSerializer
+from .serializers import PortOfLoadingReadSerializer, PortOfLoadingFilterSerializer, CarrierFilterSerializer, CompanyCreateSerializer
 from user_management.utility import return_user_id_by_name
 from vendor_booking_tool.utility import apply_date_time_range_filters
 from master_data_management.models import PortOfDestination
@@ -408,14 +408,14 @@ class CarrierFilterApiView(ListAPIView):
 
 #         --------------------- Company --------------------------------
 
-# class CreateCompanyApiView(CreateAPIView):
-#     permission_classes = (CozentusPermission,)
-#
-#     serializer_class = CompanyCreateSerializer
-#     queryset = Company.objects.all()
-#
-#     def perform_create(self, serializer):
-#         serializer.save(created_by=self.request.user.id)
+class CreateCompanyApiView(CreateAPIView):
+    permission_classes = (CozentusPermission,)
+
+    serializer_class = CompanyCreateSerializer
+    queryset = Company.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user.id)
 
 
 
