@@ -276,3 +276,28 @@ class CompanyPOD(BaseUserModel):
         db_table = "COMPANY_POD"
         verbose_name = "Company_POD"
         verbose_name_plural = "COMPANY_POD_MAPPING"
+
+
+class POLMatrix(BaseUserModel):
+    pol_id = models.PositiveIntegerField(null=True, blank=True)
+    vendor_id = models.PositiveIntegerField(null=True, blank=True)
+    origin_agent_id = models.PositiveIntegerField(null=True, blank=True)
+    customer_id = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "POL_COMPANY_MATRIX"
+        verbose_name = "Pol Company Matrix"
+        verbose_name_plural = "Pol Company Matrix"
+
+
+class PODMatrix(BaseUserModel):
+    pod_id = models.PositiveIntegerField(null=True, blank=True)
+    destination_agent_id = models.PositiveIntegerField(null=True, blank=True)
+    customer_id = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "POD_COMPANY_MATRIX"
+        verbose_name = "Pod Company Matrix"
+        verbose_name_plural = "Pod Company Matrix"
